@@ -1,14 +1,14 @@
 import React from 'react';
 
 interface Conversation {
-  id: number;
-  name: string;
+  id: string;
+  lastModified: string;
 }
 
 interface ConversationListProps {
   conversations: Conversation[];
-  currentConversationId: number;
-  onSelectConversation: (id: number) => void;
+  currentConversationId: string | null;
+  onSelectConversation: (id: string) => void;
   onCreateNewConversation: () => void;
 }
 
@@ -21,20 +21,24 @@ const ConversationList: React.FC<ConversationListProps> = ({
   return (
     <div className="conversation-list">
       <button onClick={onCreateNewConversation}>New Conversation</button>
-      
+
       <ul>
-        {conversations.map((conversation) => (
-          <li 
-            key={conversation.id} 
-            className={conversation.id === currentConversationId ? 'active' : ''}
-            onClick={() => onSelectConversation(conversation.id)}
-          >
-            <span className="conversation-icon">
-              {conversation.id === currentConversationId ? '⭐' : ''}
-            </span>
-            {conversation.name}
-          </li>
-        ))}
+        {conversations.map((conversation) => {
+          const isTemporary = conversation.id.startsWith('temp-');
+          return (
+            <li
+              key={conversation.id}
+              className={conversation.id === currentConversationId ? 'active' : ''}
+              onClick={() => onSelectConversation(conversation.id)}
+            >
+              <span className="conversation-icon">
+                {conversation.id === currentConversationId ? '⭐' : ''}
+                {isTemporary ? '✨' : ''}
+              </span>
+              {isTemporary ? 'New Conversation' : conversation.lastModified}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

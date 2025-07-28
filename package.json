@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "@types/react-syntax-highlighter": "^15.5.13",
+    "ravendb": "^7.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-syntax-highlighter": "^15.6.1"
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^15.6.1",
+    "rehype-highlight": "^7.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
@@ -26,6 +29,6 @@
     "globals": "^16.3.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
-    "vite": "^7.0.4"
+    "vite": "^6.0.1"
   }
 }

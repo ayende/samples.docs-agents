@@ -6,90 +6,144 @@ import './App.css';
 
 interface Message {
   sender: 'user' | 'ai';
-  text: string;
-  language?: string;
+  text: string | null;
+  response: {
+    answer: string;
+    sources?: string[];
+  } | null;
 }
 
 interface Conversation {
-  id: number;
-  name: string;
-  messages: Message[];
+  id: string;
+  lastModified: string;
 }
 
 const App: React.FC = () => {
-  const [conversations, setConversations] = useState<Conversation[]>([
-    { id: 1, name: 'C# Conversation', messages: [] },
-    { id: 2, name: 'Python Conversation', messages: [] },
-  ]);
-  const [currentConversationId, setCurrentConversationId] = useState<number>(1);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [language, setLanguage] = useState<string>('csharp');
 
-  const handleSelectConversation = (id: number) => {
+  // Load conversations from backend on component mount
+  useEffect(() => {
+    const loadConversations = async () => {
+      try {
+        const response = await chatService.getConversations();
+
+        setConversations(response);
+
+        // Set the first conversation as current if available
+        if (response.length > 0) {
+          setCurrentConversationId(response[0].id);
+        }
+      } catch (error) {
+        console.error('Error loading conversations:', error);
+        alert('Failed to load conversations from the backend. Please check if the server is running: ' + error);
+      }
+    };
+
+    loadConversations();
+  }, []);
+
+  // Load messages when conversation changes
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!currentConversationId || currentConversationId.startsWith('temp-')) {
+        setMessages([]);
+        return;
+      }
+
+      try {
+        const conversationMessages = await chatService.getConversationMessages(currentConversationId);
+        setMessages(conversationMessages);
+      } catch (error) {
+        console.error('Error loading messages:', error);
+        alert('Failed to load conversation messages from the backend.');
+        setMessages([]);
+      }
+    };
+
+    loadMessages();
+  }, [currentConversationId]);
+
+  const handleSelectConversation = (id: string) => {
     setCurrentConversationId(id);
   };
 
   const handleCreateNewConversation = () => {
-    const newId = conversations.length + 1;
+    // Create conversation purely on frontend
     const newConversation: Conversation = {
-      id: newId,
-      name: `Conversation ${newId}`,
-      messages: [],
+      id: `temp-${Date.now()}`, // Temporary ID that will be replaced by backend
+      lastModified: new Date().toISOString()
     };
-    setConversations([...conversations, newConversation]);
-    setCurrentConversationId(newId);
+
+    setConversations([newConversation, ...conversations]);
+    setCurrentConversationId(newConversation.id);
+    // Clear messages when creating a new conversation
+    setMessages([]);
   };
 
   const handleSendMessage = async (text: string) => {
-    const currentConversation = conversations.find(c => c.id === currentConversationId);
-    if (currentConversation) {
-      // Add user message immediately
-      const userMessage: Message = { sender: 'user', text };
-      const newMessages: Message[] = [...currentConversation.messages, userMessage];
-      
-      // Update conversations with user message
-      const updatedConversations = conversations.map(c =>
-        c.id === currentConversationId ? { ...c, messages: newMessages } : c
-      );
-      setConversations(updatedConversations);
-      
-      try {
-        // Get AI response from backend
-        const aiResponse = await chatService.sendMessage(text, language, currentConversationId);
-        const aiMessage: Message = {
-          sender: aiResponse.sender,
-          text: aiResponse.text,
-          language: aiResponse.language,
+    if (!currentConversationId) {
+      alert('Please select a conversation first.');
+      return;
+    }
+
+    // Add user message immediately to UI
+    const userMessage: Message = { sender: 'user', text, response: null };
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+
+    try {
+      // Check if this is a temporary conversation (starts with 'temp-')
+      const isTemporaryConversation = currentConversationId.startsWith('temp-');
+      const conversationIdToSend = isTemporaryConversation ? undefined : currentConversationId;
+
+      // Get AI response from backend
+      const aiResponse = await chatService.sendMessage(text, language, conversationIdToSend);
+      const aiMessage: Message = {
+        sender: 'ai',
+        text: null,
+        response: { answer: aiResponse.answer, sources: aiResponse.sources },
+      };
+
+      // Add AI response to UI
+      setMessages(prevMessages => [...prevMessages, aiMessage]);
+
+      // If this was a temporary conversation, update it with the real ID from backend
+      if (isTemporaryConversation && aiResponse.conversationId) {
+        const updatedConversation: Conversation = {
+          id: aiResponse.conversationId,
+          lastModified: new Date().toISOString()
         };
-        
-        // Add AI response
-        const finalMessages = [...newMessages, aiMessage];
-        const finalConversations = conversations.map(c =>
-          c.id === currentConversationId ? { ...c, messages: finalMessages } : c
+
+        // Replace the temporary conversation with the real one
+        setConversations(prevConversations =>
+          prevConversations.map(conv =>
+            conv.id === currentConversationId ? updatedConversation : conv
+          )
         );
-        setConversations(finalConversations);
-      } catch (error) {
-        console.error('Error getting AI response:', error);
-        // Fallback response if backend fails
-        const fallbackResponse: Message = {
-          sender: 'ai',
-          text: `Sorry, I'm having trouble connecting to the server right now.`,
-        };
-        const finalMessages = [...newMessages, fallbackResponse];
-        const finalConversations = conversations.map(c =>
-          c.id === currentConversationId ? { ...c, messages: finalMessages } : c
-        );
-        setConversations(finalConversations);
+
+        setCurrentConversationId(aiResponse.conversationId);
       }
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      alert('Error getting AI response from the backend. Please try again.');
+
+      // Add fallback response if backend fails
+      const fallbackResponse: Message = {
+        sender: 'ai',
+        text: `Sorry, I'm having trouble connecting to the server right now.`,
+        response: null,
+      };
+      setMessages(prevMessages => [...prevMessages, fallbackResponse]);
     }
   };
-
-  const currentConversation = conversations.find(c => c.id === currentConversationId);
 
   return (
     <div className="app">
       <div className="main-content">
         <div className="chat-container">
-          {currentConversation && <ChatWindow messages={currentConversation.messages} />}
+          <ChatWindow messages={messages} />
           <div className="chat-input">
             <input
               type="text"
@@ -103,21 +157,21 @@ const App: React.FC = () => {
             />
           </div>
           <div className="language-selector">
-            <div 
+            <div
               className={`language-option ${language === 'csharp' ? 'selected' : ''}`}
               onClick={() => setLanguage('csharp')}
             >
               <div className="language-icon">🔷</div>
               <div className="language-name">C#</div>
             </div>
-            <div 
+            <div
               className={`language-option ${language === 'python' ? 'selected' : ''}`}
               onClick={() => setLanguage('python')}
             >
               <div className="language-icon">🐍</div>
               <div className="language-name">Python</div>
             </div>
-            <div 
+            <div
               className={`language-option ${language === 'javascript' ? 'selected' : ''}`}
               onClick={() => setLanguage('javascript')}
             >
