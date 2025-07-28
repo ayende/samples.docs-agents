@@ -2,18 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import { chatService } from '../services/chatService';
-
-interface Message {
-  sender: 'user' | 'ai';
-  text?: string;
-  response?: {
-    answer: string;
-    sources?: string[];
-    [key: string]: any;
-  };
-  language?: string;
-  isLoading?: boolean;
-}
+import type { Message } from '../types';
 
 interface ChatWindowProps {
   messages: Message[];

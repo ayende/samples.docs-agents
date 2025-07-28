@@ -123,7 +123,7 @@ export { router as chatRoutes };
 function getUserText(msg: any, index: number): string | null {
   if (msg.role !== 'user')
     return null;
-  if (index === 1) {
+  if (index === 0) {
     // Remove the programming language suffix from the first message
     let content = msg.content;
     const suffix = /\n\n--\nProgramming language: .+$/;

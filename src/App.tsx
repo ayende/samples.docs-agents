@@ -3,22 +3,7 @@ import './App.css';
 import ChatWindow from './components/ChatWindow';
 import ConversationList from './components/ConversationList';
 import { chatService } from './services/chatService';
-
-interface Message {
-  sender: 'user' | 'ai';
-  text?: string;
-  response?: {
-    answer: string;
-    sources?: string[];
-  };
-  isLoading?: boolean;
-}
-
-interface Conversation {
-  id: string;
-  lastModified: string;
-  language?: string;
-}
+import type { Conversation, Message } from './types';
 
 const App: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);

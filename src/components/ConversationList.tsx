@@ -1,10 +1,5 @@
 import React, { useState } from 'react';
-
-interface Conversation {
-  id: string;
-  lastModified: string;
-  language?: string;
-}
+import type { Conversation } from '../types';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -39,7 +34,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
     <div className="conversation-list">
       <div className="new-conversation-section">
         {!showLanguageSelector ? (
-          <button 
+          <button
             className="new-conversation-btn"
             onClick={() => setShowLanguageSelector(true)}
           >
@@ -49,7 +44,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
           <div className="language-selection">
             <div className="language-selection-header">
               <span>Select Language:</span>
-              <button 
+              <button
                 className="close-btn"
                 onClick={() => setShowLanguageSelector(false)}
               >
@@ -57,19 +52,19 @@ const ConversationList: React.FC<ConversationListProps> = ({
               </button>
             </div>
             <div className="language-options">
-              <button 
+              <button
                 className="language-btn"
                 onClick={() => handleCreateConversation('csharp')}
               >
                 🔷 C#
               </button>
-              <button 
+              <button
                 className="language-btn"
                 onClick={() => handleCreateConversation('python')}
               >
                 🐍 Python
               </button>
-              <button 
+              <button
                 className="language-btn"
                 onClick={() => handleCreateConversation('javascript')}
               >
