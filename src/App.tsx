@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import './App.css';
 import ChatWindow from './components/ChatWindow';
 import ConversationList from './components/ConversationList';
 import { chatService } from './services/chatService';
-import './App.css';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -11,6 +11,7 @@ interface Message {
     answer: string;
     sources?: string[];
   };
+  isLoading?: boolean;
 }
 
 interface Conversation {
@@ -98,6 +99,14 @@ const App: React.FC = () => {
     const userMessage: Message = { sender: 'user', text };
     setMessages(prevMessages => [...prevMessages, userMessage]);
 
+    // Add loading message with animation
+    const loadingMessage: Message = {
+      sender: 'ai',
+      text: '🤔 Thinking...',
+      isLoading: true
+    };
+    setMessages(prevMessages => [...prevMessages, loadingMessage]);
+
     try {
       // Check if this is a temporary conversation (starts with 'temp-')
       const isTemporaryConversation = currentConversationId.startsWith('temp-');
@@ -110,8 +119,13 @@ const App: React.FC = () => {
         response: { answer: aiResponse.answer, sources: aiResponse.sources },
       };
 
-      // Add AI response to UI
-      setMessages(prevMessages => [...prevMessages, aiMessage]);
+      // Replace loading message with actual AI response
+      setMessages(prevMessages => {
+        const newMessages = [...prevMessages];
+        // Replace the last message (which should be the loading message) with the AI response
+        newMessages[newMessages.length - 1] = aiMessage;
+        return newMessages;
+      });
 
       // If this was a temporary conversation, update it with the real ID from backend
       if (isTemporaryConversation && aiResponse.conversationId) {
@@ -135,12 +149,17 @@ const App: React.FC = () => {
       console.error('Error getting AI response:', error);
       alert('Error getting AI response from the backend. Please try again.');
 
-      // Add fallback response if backend fails
+      // Replace loading message with fallback response
       const fallbackResponse: Message = {
         sender: 'ai',
         text: `Sorry, I'm having trouble connecting to the server right now.`,
       };
-      setMessages(prevMessages => [...prevMessages, fallbackResponse]);
+      setMessages(prevMessages => {
+        const newMessages = [...prevMessages];
+        // Replace the last message (which should be the loading message) with the fallback response
+        newMessages[newMessages.length - 1] = fallbackResponse;
+        return newMessages;
+      });
     }
   };
 

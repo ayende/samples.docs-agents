@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import { chatService } from '../services/chatService';
@@ -12,6 +12,7 @@ interface Message {
     [key: string]: any;
   };
   language?: string;
+  isLoading?: boolean;
 }
 
 interface ChatWindowProps {
@@ -88,7 +89,68 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
     setSelectedDocument(null);
     setDocumentContent('');
   };
+
+  const LoadingAnimation: React.FC = () => {
+    const [currentEmoji, setCurrentEmoji] = useState(0);
+    const [currentText, setCurrentText] = useState(0);
+
+    const emojis = ['🤔', '💭', '🧠', '⚡', '✨', '🔍', '📝', '💡'];
+    const texts = [
+      'Thinking...',
+      'Processing your request...',
+      'Searching documentation...',
+      'Analyzing context...',
+      'Generating response...',
+      'Almost there...'
+    ];
+
+    useEffect(() => {
+      const emojiInterval = setInterval(() => {
+        setCurrentEmoji(prev => (prev + 1) % emojis.length);
+      }, 300);
+
+      const textInterval = setInterval(() => {
+        setCurrentText(prev => (prev + 1) % texts.length);
+      }, 1500);
+
+      return () => {
+        clearInterval(emojiInterval);
+        clearInterval(textInterval);
+      };
+    }, []);
+
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        color: '#0e639c',
+        fontStyle: 'italic'
+      }}>
+        <span style={{
+          fontSize: '18px',
+          display: 'inline-block',
+          animation: 'pulse 1s infinite'
+        }}>
+          {emojis[currentEmoji]}
+        </span>
+        <span>{texts[currentText]}</span>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+          }
+        `}</style>
+      </div>
+    );
+  };
+
   const renderMessageContent = (message: Message) => {
+    // Handle loading state
+    if (message.isLoading) {
+      return <LoadingAnimation />;
+    }
+
     // Get the text content - either from text property or response.answer
     const textContent = message.text || message.response?.answer || '';
 
@@ -191,9 +253,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
               >
                 📄 {source}
               </button>
-              <a 
-                href={chatService.getDocumentUrl(source)} 
-                target="_blank" 
+              <a
+                href={chatService.getDocumentUrl(source)}
+                target="_blank"
                 rel="noopener noreferrer"
                 style={{
                   color: '#0e639c',
@@ -276,7 +338,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
           </div>
         </div>
       )}
-      
+
       {messages.map((message, index) => (
         <div key={index} className={`message ${message.sender}`}>
           {renderMessageContent(message)}

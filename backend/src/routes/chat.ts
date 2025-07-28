@@ -36,7 +36,7 @@ router.post('/message', asyncHandler(async (req: Request, res: Response) => {
       'userId': 'users/default',
       'language': language,
     });
-    message += `\n\nProgramming language: ${language}`;
+    message += `\n\n--\nProgramming language: ${language}`;
   }
 
   conversation.setUserPrompt(message);
@@ -104,9 +104,9 @@ router.get('/messages', asyncHandler(async (req: Request, res: Response) => {
     const messages = conversation.Messages || [];
     const formattedMessages = messages
       .filter((msg: any) => msg.role == 'user' || (msg.role == 'assistant' && msg.content))
-      .map((msg: any) => ({
+      .map((msg: any, index: number) => ({
         sender: msg.role === 'user' ? 'user' : 'ai',
-        text: msg.role === 'user' ? msg.content : null,
+        text: getUserText(msg, index),
         response: msg.role === 'assistant' ? JSON.parse(msg.content) : null,
         date: msg.date,
         tokens: msg.usage?.TotalTokens || 0
@@ -119,4 +119,16 @@ router.get('/messages', asyncHandler(async (req: Request, res: Response) => {
 }));
 
 export { router as chatRoutes };
+
+function getUserText(msg: any, index: number): string | null {
+  if (msg.role !== 'user')
+    return null;
+  if (index === 1) {
+    // Remove the programming language suffix from the first message
+    let content = msg.content;
+    const suffix = /\n\n--\nProgramming language: .+$/;
+    return content.replace(suffix, '');
+  }
+  return msg.content;
+}
 
