@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
+import { chatService } from '../services/chatService';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -18,6 +19,75 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
+  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
+  const [documentContent, setDocumentContent] = useState<string>('');
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false);
+
+  const handleViewDocument = async (documentId: string) => {
+    setIsLoadingDocument(true);
+    try {
+      const content = await chatService.getDocument(documentId);
+      // Wrap the content with white background and proper styling
+      const styledContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              background-color: white;
+              color: black;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+              line-height: 1.6;
+              margin: 20px;
+              padding: 0;
+            }
+            pre {
+              background-color: #f6f8fa;
+              border: 1px solid #d1d9e0;
+              border-radius: 6px;
+              padding: 12px;
+              overflow-x: auto;
+            }
+            code {
+              background-color: #f6f8fa;
+              padding: 2px 4px;
+              border-radius: 3px;
+              font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            }
+            h1, h2, h3, h4, h5, h6 {
+              color: #1f2328;
+              margin-top: 24px;
+              margin-bottom: 16px;
+            }
+            a {
+              color: #0969da;
+              text-decoration: none;
+            }
+            a:hover {
+              text-decoration: underline;
+            }
+          </style>
+        </head>
+        <body>
+          ${content}
+        </body>
+        </html>
+      `;
+      setDocumentContent(styledContent);
+      setSelectedDocument(documentId);
+    } catch (error) {
+      console.error('Error loading document:', error);
+      alert('Failed to load document: ' + error);
+    } finally {
+      setIsLoadingDocument(false);
+    }
+  };
+
+  const closeDocumentViewer = () => {
+    setSelectedDocument(null);
+    setDocumentContent('');
+  };
   const renderMessageContent = (message: Message) => {
     // Get the text content - either from text property or response.answer
     const textContent = message.text || message.response?.answer || '';
@@ -100,15 +170,39 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
         <strong style={{ color: '#0e639c' }}>Sources:</strong>
         <div style={{ marginTop: '4px' }}>
           {sources.map((source, index) => (
-            <div key={index} style={{ marginBottom: '2px' }}>
-              <a href={`/docs?id=${source}`} target="_blank" rel="noopener noreferrer"
+            <div key={index} style={{ marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => handleViewDocument(source)}
+                disabled={isLoadingDocument}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#0e639c',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  fontSize: '0.9em',
+                  padding: '2px 4px',
+                  borderRadius: '3px',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = 'rgba(14, 99, 156, 0.2)'}
+                onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
+              >
+                📄 {source}
+              </button>
+              <a 
+                href={chatService.getDocumentUrl(source)} 
+                target="_blank" 
+                rel="noopener noreferrer"
                 style={{
                   color: '#0e639c',
-                  textDecoration: 'none',
-                  fontFamily: 'monospace',
-                  fontSize: '0.9em'
-                }}>
-                📄 {source}
+                  fontSize: '0.8em',
+                  textDecoration: 'none'
+                }}
+                title="Open in new tab"
+              >
+                🔗
               </a>
             </div>
           ))}
@@ -119,6 +213,70 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
 
   return (
     <div className="chat-window">
+      {selectedDocument && (
+        <div className="document-viewer" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#1e1e1e',
+            borderRadius: '8px',
+            width: '90%',
+            height: '90%',
+            position: 'relative',
+            border: '1px solid #3e3e42'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderBottom: '1px solid #3e3e42',
+              backgroundColor: '#252526'
+            }}>
+              <h3 style={{ margin: 0, color: '#0e639c', fontSize: '16px' }}>
+                Document: {selectedDocument}
+              </h3>
+              <button
+                onClick={closeDocumentViewer}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#d4d4d4',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '4px'
+                }}
+                onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#3e3e42'}
+                onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
+              >
+                ×
+              </button>
+            </div>
+            <iframe
+              srcDoc={documentContent}
+              style={{
+                width: '100%',
+                height: 'calc(100% - 60px)',
+                border: 'none',
+                borderRadius: '0 0 8px 8px'
+              }}
+              title={`Document: ${selectedDocument}`}
+            />
+          </div>
+        </div>
+      )}
+      
       {messages.map((message, index) => (
         <div key={index} className={`message ${message.sender}`}>
           {renderMessageContent(message)}

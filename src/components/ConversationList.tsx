@@ -1,16 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface Conversation {
   id: string;
   lastModified: string;
+  language?: string;
 }
 
 interface ConversationListProps {
   conversations: Conversation[];
   currentConversationId: string | null;
   onSelectConversation: (id: string) => void;
-  onCreateNewConversation: () => void;
+  onCreateNewConversation: (language: string) => void;
 }
+
+const getLanguageIcon = (language?: string) => {
+  switch (language) {
+    case 'csharp': return '🔷';
+    case 'python': return '🐍';
+    case 'javascript': return '⚡';
+    default: return '💬';
+  }
+};
 
 const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
@@ -18,9 +28,57 @@ const ConversationList: React.FC<ConversationListProps> = ({
   onSelectConversation,
   onCreateNewConversation,
 }) => {
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+
+  const handleCreateConversation = (language: string) => {
+    onCreateNewConversation(language);
+    setShowLanguageSelector(false);
+  };
+
   return (
     <div className="conversation-list">
-      <button onClick={onCreateNewConversation}>New Conversation</button>
+      <div className="new-conversation-section">
+        {!showLanguageSelector ? (
+          <button 
+            className="new-conversation-btn"
+            onClick={() => setShowLanguageSelector(true)}
+          >
+            New Conversation
+          </button>
+        ) : (
+          <div className="language-selection">
+            <div className="language-selection-header">
+              <span>Select Language:</span>
+              <button 
+                className="close-btn"
+                onClick={() => setShowLanguageSelector(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="language-options">
+              <button 
+                className="language-btn"
+                onClick={() => handleCreateConversation('csharp')}
+              >
+                🔷 C#
+              </button>
+              <button 
+                className="language-btn"
+                onClick={() => handleCreateConversation('python')}
+              >
+                🐍 Python
+              </button>
+              <button 
+                className="language-btn"
+                onClick={() => handleCreateConversation('javascript')}
+              >
+                ⚡ Node.js
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <ul>
         {conversations.map((conversation) => {
@@ -32,6 +90,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
               onClick={() => onSelectConversation(conversation.id)}
             >
               <span className="conversation-icon">
+                {getLanguageIcon(conversation.language)}
                 {conversation.id === currentConversationId ? '⭐' : ''}
                 {isTemporary ? '✨' : ''}
               </span>

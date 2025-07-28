@@ -6,23 +6,23 @@ import './App.css';
 
 interface Message {
   sender: 'user' | 'ai';
-  text: string | null;
-  response: {
+  text?: string;
+  response?: {
     answer: string;
     sources?: string[];
-  } | null;
+  };
 }
 
 interface Conversation {
   id: string;
   lastModified: string;
+  language?: string;
 }
 
 const App: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [language, setLanguage] = useState<string>('csharp');
 
   // Load conversations from backend on component mount
   useEffect(() => {
@@ -58,7 +58,7 @@ const App: React.FC = () => {
         setMessages(conversationMessages);
       } catch (error) {
         console.error('Error loading messages:', error);
-        alert('Failed to load conversation messages from the backend.');
+        alert('Failed to load conversation messages from the backend: ' + error);
         setMessages([]);
       }
     };
@@ -70,11 +70,12 @@ const App: React.FC = () => {
     setCurrentConversationId(id);
   };
 
-  const handleCreateNewConversation = () => {
+  const handleCreateNewConversation = (language: string) => {
     // Create conversation purely on frontend
     const newConversation: Conversation = {
       id: `temp-${Date.now()}`, // Temporary ID that will be replaced by backend
-      lastModified: new Date().toISOString()
+      lastModified: new Date().toISOString(),
+      language: language
     };
 
     setConversations([newConversation, ...conversations]);
@@ -89,8 +90,12 @@ const App: React.FC = () => {
       return;
     }
 
+    // Get the current conversation to determine its language
+    const currentConversation = conversations.find(conv => conv.id === currentConversationId);
+    const conversationLanguage = currentConversation?.language || 'csharp';
+
     // Add user message immediately to UI
-    const userMessage: Message = { sender: 'user', text, response: null };
+    const userMessage: Message = { sender: 'user', text };
     setMessages(prevMessages => [...prevMessages, userMessage]);
 
     try {
@@ -99,10 +104,9 @@ const App: React.FC = () => {
       const conversationIdToSend = isTemporaryConversation ? undefined : currentConversationId;
 
       // Get AI response from backend
-      const aiResponse = await chatService.sendMessage(text, language, conversationIdToSend);
+      const aiResponse = await chatService.sendMessage(text, conversationLanguage, conversationIdToSend);
       const aiMessage: Message = {
         sender: 'ai',
-        text: null,
         response: { answer: aiResponse.answer, sources: aiResponse.sources },
       };
 
@@ -111,9 +115,11 @@ const App: React.FC = () => {
 
       // If this was a temporary conversation, update it with the real ID from backend
       if (isTemporaryConversation && aiResponse.conversationId) {
+        const tempConversation = conversations.find(conv => conv.id === currentConversationId);
         const updatedConversation: Conversation = {
           id: aiResponse.conversationId,
-          lastModified: new Date().toISOString()
+          lastModified: new Date().toISOString(),
+          language: tempConversation?.language || conversationLanguage
         };
 
         // Replace the temporary conversation with the real one
@@ -133,7 +139,6 @@ const App: React.FC = () => {
       const fallbackResponse: Message = {
         sender: 'ai',
         text: `Sorry, I'm having trouble connecting to the server right now.`,
-        response: null,
       };
       setMessages(prevMessages => [...prevMessages, fallbackResponse]);
     }
@@ -155,29 +160,6 @@ const App: React.FC = () => {
                 }
               }}
             />
-          </div>
-          <div className="language-selector">
-            <div
-              className={`language-option ${language === 'csharp' ? 'selected' : ''}`}
-              onClick={() => setLanguage('csharp')}
-            >
-              <div className="language-icon">🔷</div>
-              <div className="language-name">C#</div>
-            </div>
-            <div
-              className={`language-option ${language === 'python' ? 'selected' : ''}`}
-              onClick={() => setLanguage('python')}
-            >
-              <div className="language-icon">🐍</div>
-              <div className="language-name">Python</div>
-            </div>
-            <div
-              className={`language-option ${language === 'javascript' ? 'selected' : ''}`}
-              onClick={() => setLanguage('javascript')}
-            >
-              <div className="language-icon">⚡</div>
-              <div className="language-name">Node.js</div>
-            </div>
           </div>
         </div>
       </div>

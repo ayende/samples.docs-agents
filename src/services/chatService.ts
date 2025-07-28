@@ -10,6 +10,7 @@ export interface ApiMessage {
 export interface ApiConversation {
   id: string;
   lastModified: string;
+  language?: string;
 }
 
 export interface ModelResult {
@@ -61,6 +62,22 @@ export class ChatService {
 
     const data = await response.json();
     return data.messages;
+  }
+
+  async getDocument(documentId: string): Promise<string> {
+    const response = await fetch(`${API_BASE_URL}/docs?id=${encodeURIComponent(documentId)}`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Return the HTML content as text
+    return await response.text();
+  }
+
+  // Helper method to get the document URL for iframe usage
+  getDocumentUrl(documentId: string): string {
+    return `${API_BASE_URL}/docs?id=${encodeURIComponent(documentId)}`;
   }
 }
 

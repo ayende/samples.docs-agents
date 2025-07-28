@@ -2,7 +2,7 @@ import { AbstractJavaScriptIndexCreationTask, AiAgentConfiguration, DocumentStor
 
 // Initialize the document store
 const documentStore = new DocumentStore([
-    process.env.RAVENDB_URL || 'http://localhost:8080'
+    process.env.RAVENDB_URL || 'http://127.0.0.1:8080'
 ], process.env.RAVENDB_DATABASE || 'Docs');
 
 // Configure certificate if needed
@@ -109,7 +109,7 @@ limit 5
         conversationIdPrefix: 'chats/',
         conversationExpirationInSec: 60 * 60 * 24 * 60, // 60 days
     },
-    parameters: new Set(['userId']),
+    parameters: new Set(['userId', 'language']),
     outputSchema: '',
     actions: [],
     chatTrimming: null,

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { chatRoutes } from './routes/chat';
+import { docsRoutes } from './routes/docs';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -11,6 +12,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/chat', chatRoutes);
+app.use('/api/docs', docsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

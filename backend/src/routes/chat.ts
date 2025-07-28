@@ -25,15 +25,21 @@ router.use((error: Error, req: Request, res: Response, next: NextFunction) => {
 
 // POST /api/message
 router.post('/message', asyncHandler(async (req: Request, res: Response) => {
-  const { message, language, conversationId } = req.body;
+  const { language, conversationId } = req.body;
+  let { message } = req.body;
 
-  const conversation = conversationId != null ?
-    documentStore.ai.resumeConversation<ModelResponse>(conversationId) :
-    documentStore.ai.startConversation<ModelResponse>('ravendb-docs-rag-agent', {
+  let conversation;
+  if (conversationId != null) {
+    conversation = documentStore.ai.resumeConversation<ModelResponse>(conversationId);
+  } else {
+    conversation = documentStore.ai.startConversation<ModelResponse>('ravendb-docs-rag-agent', {
       'userId': 'users/default',
-    })
+      'language': language,
+    });
+    message += `\n\nProgramming language: ${language}`;
+  }
 
-  conversation.setUserPrompt(message + "\n\nProgramming language: " + language);
+  conversation.setUserPrompt(message);
   const resp = await conversation.run();
   if (resp != 'Done') {
     // cannot happen, we have no users actions to run
@@ -64,7 +70,8 @@ order by c.lastModified desc
 select {
   id: id(c),
   lastModified: c.lastModified,
-  lastMessage: c.Messages[1].content.substring(0, 50)
+  startingMessage: c.Messages[1].content.substring(0, 50),
+  language: c.Parameters.language
 }
 limit 10
 `)
